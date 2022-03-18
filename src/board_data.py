@@ -114,6 +114,7 @@ class BoardData:
         for snake in board["snakes"]:
             self.arrive_time_calculator(snake["head"]["x"], snake["head"]["y"], snake["id"], 1)
 
+    # TODO wrapped, himesz palyarol, tuloldalt kijossz
     def arrive_time_calculator(self, x, y, id, number):
 
         for [i, j] in [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]:

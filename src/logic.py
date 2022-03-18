@@ -32,7 +32,7 @@ def count_free_neighbours(board: BoardData, x: int, y: int) -> int:
 """
 
 
-# iranok kivalogatasa avoid_obstacles fuggveny szamara
+# iranyok kivalogatasa avoid_obstacles fuggveny szamara
 def help_avoid_snake(board: BoardData, dead_moves: List[str], hazard_moves: List[str], x: int, y: int, direction: str):
     if board.board[y][x].name in ["head", "body"]:
         dead_moves.append(direction)
@@ -45,6 +45,7 @@ def help_avoid_snake(board: BoardData, dead_moves: List[str], hazard_moves: List
         hazard_moves.append(direction)
 
 
+# TODO wrapped modban nem lehet falnak menni
 # pimitiv akadáaly kerules
 def avoid_obstacles(data: dict, board: BoardData, possible_moves: List[str], hazard_moves: List[str]) -> List[str]:
     x = data["you"]["head"]["x"]
@@ -145,6 +146,7 @@ def food_recursion(board: BoardData, been: List[List[int]], x: int, y: int, my_i
                         food_recursion(board, been, i, j, my_id)
 
 
+# TODO wrapped modban atmehet falon
 # okosabb kajakereses erkezesi ido alapjan, utvonaltervezessel
 def find_food_better(data: Dict, board: BoardData, possible_moves: List[str]) -> List[str]:
     fx = -1
@@ -230,6 +232,7 @@ def help_to_head(data: Dict, board: BoardData, x: int, y: int) -> list:
     return [can_go, attack]
 
 
+# TODO wrapped, falon at fejeles
 # fejeles tervezes szomszedos mezokon
 # oda nem mehetsz ahova másik head el tud menni és nagyobb vagy egyenlő hosszú, CSAK HA MUSZÁLY
 # oda mész ahova másik head tud menni és rövidebb
@@ -272,7 +275,7 @@ def hazard_remover(possible_moves: List[str], hazard_moves: List[str]) -> List[s
 
     return possible_moves
 
-
+# TODO wrapped, fal mellett a tuloldalon is lehet testresz
 # megvizsgalja hogy van -e mellette vagy keresztben mellette testresz
 def has_body_neighbour(board: BoardData, x: int, y: int) -> bool:
     for [i, j] in [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1],
@@ -284,10 +287,23 @@ def has_body_neighbour(board: BoardData, x: int, y: int) -> bool:
     return False
 
 
+# TODO wrapped modban vizsgaljon tovabb, ha kimenne a palyarol, atjon a tuloldalt
 def death_recursion(data: Dict, board: BoardData, been: List[List], x: int, y: int):
+    # wrappedben kulso koordinata atkerul a tuloldalra
+    if data["game"]["ruleset"]["name"] == "wrapped":
+        if x < 0:
+            x = board.width-1
+        elif y < 0:
+            y = board.height-1
+        elif x >= board.width:
+            x = 0
+        elif y >= board.height:
+            y = 0
+
     # fal
-    if x < 0 or y < 0 or x >= board.width or y >= board.height:
+    elif x < 0 or y < 0 or x >= board.width or y >= board.height:
         return
+
     # itt már jártunk
     if been[y][x] == 1:
         return
