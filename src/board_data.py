@@ -27,10 +27,12 @@ class BoardData:
     board = []
     height: int
     width: int
+    modename: str
 
-    def __init__(self, board):
+    def __init__(self, board, modename):
         self.height = board["height"]
         self.width = board["width"]
+        self.modename = modename
 
         for i in range(self.height):
             self.board.append([])
@@ -114,10 +116,29 @@ class BoardData:
         for snake in board["snakes"]:
             self.arrive_time_calculator(snake["head"]["x"], snake["head"]["y"], snake["id"], 1)
 
-    # TODO wrapped, himesz palyarol, tuloldalt kijossz
+    def wrap_coord_replace(self, x: int, y: int):
+        if x < 0:
+            x = self.width - 1
+        if y < 0:
+            y = self.height - 1
+        if x >= self.width:
+            x = 0
+        if y >= self.height:
+            y = 0
+
+    # wrapped, kimesz palyarol, tuloldalt kijossz------------------------------------------------------------------
     def arrive_time_calculator(self, x, y, id, number):
 
         for [i, j] in [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]:
+            if self.modename == "wrapped":  # wrapped change------
+                if i < 0:
+                    i = self.width - 1
+                if j < 0:
+                    j = self.height - 1
+                if i >= self.width:
+                    i = 0
+                if j >= self.height:
+                    j = 0
             if 0 <= i < self.width and 0 <= j < self.height:
                 if self.board[j][i].name in ["clear", "food", "hazard"]:
 

@@ -8,6 +8,17 @@ def distance(point1: dict, point2: dict) -> int:
     return abs(point1["x"] - point2["x"]) + abs(point1["y"] - point2["y"])
 
 
+def wrap_coord_replace(board: BoardData, x: int, y: int):
+    if x < 0:
+        x = board.width - 1
+    if y < 0:
+        y = board.height - 1
+    if x >= board.width:
+        x = 0
+    if y >= board.height:
+        y = 0
+
+
 """
 def count_free_neighbours(board: BoardData, x: int, y: int) -> int:
     count = 0
@@ -45,26 +56,36 @@ def help_avoid_snake(board: BoardData, dead_moves: List[str], hazard_moves: List
         hazard_moves.append(direction)
 
 
-# TODO wrapped modban nem lehet falnak menni
+# wrapped modban nem lehet falnak menni
 # pimitiv akadáaly kerules
 def avoid_obstacles(data: dict, board: BoardData, possible_moves: List[str], hazard_moves: List[str]) -> List[str]:
     x = data["you"]["head"]["x"]
     y = data["you"]["head"]["y"]
 
     # da walls
-    if x == board.width - 1:
-        possible_moves.remove("right")
-    elif x == 0:
-        possible_moves.remove("left")
+    if data['game']['ruleset']['name'] != 'wrapped':
+        if x == board.width - 1:
+            possible_moves.remove("right")
+        elif x == 0:
+            possible_moves.remove("left")
 
-    if y == board.height - 1:
-        possible_moves.remove("up")
-    elif y == 0:
-        possible_moves.remove("down")
+        if y == board.height - 1:
+            possible_moves.remove("up")
+        elif y == 0:
+            possible_moves.remove("down")
 
     # bodies and hazards
     dead_moves = []
     for [i, j, direction] in [[x + 1, y, "right"], [x - 1, y, "left"], [x, y + 1, "up"], [x, y - 1, "down"]]:
+        if data["game"]["ruleset"]["name"] == "wrapped":  # wrapped change------
+            if i < 0:
+                i = board.width - 1
+            if j < 0:
+                j = board.height - 1
+            if i >= board.width:
+                i = 0
+            if j >= board.height:
+                j = 0
         if 0 <= i < board.width and 0 <= j < board.height:
             help_avoid_snake(board, dead_moves, hazard_moves, i, j, direction)
 
@@ -136,17 +157,27 @@ def find_food(data: dict, board: BoardData, possible_moves: List[str]) -> List[s
 """
 
 
-def food_recursion(board: BoardData, been: List[List[int]], x: int, y: int, my_id: str):
+# wrapped
+def food_recursion(data: Dict, board: BoardData, been: List[List[int]], x: int, y: int, my_id: str):
     for [i, j] in [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]:
+        if data["game"]["ruleset"]["name"] == "wrapped":  # wrapped change------
+            if i < 0:
+                i = board.width - 1
+            if j < 0:
+                j = board.height - 1
+            if i >= board.width:
+                i = 0
+            if j >= board.height:
+                j = 0
         if 0 <= i < board.width and 0 <= j < board.height:
             if board.board[j][i].name in ["clear", "hazard", "food"]:
                 if board.board[j][i].arrive_time[my_id] < board.board[y][x].arrive_time[my_id]:
                     if [j, i] not in been:
                         been.append([i, j])
-                        food_recursion(board, been, i, j, my_id)
+                        food_recursion(data, board, been, i, j, my_id)
 
 
-# TODO wrapped modban atmehet falon
+# wrapped modban atmehet falon-------------------------------------------------------------------------------------
 # okosabb kajakereses erkezesi ido alapjan, utvonaltervezessel
 def find_food_better(data: Dict, board: BoardData, possible_moves: List[str]) -> List[str]:
     fx = -1
@@ -202,7 +233,9 @@ def find_food_better(data: Dict, board: BoardData, possible_moves: List[str]) ->
     # utvonal a legjobbhoz
     if my_time != -1:
         been.append([fx, fy])
-        food_recursion(board, been, fx, fy, data["you"]["id"])
+        # csak akkor jutunk el oda, ha benne van a mi arrive_time-unk
+        if data["you"]["id"] in board.board[fy][fx].arrive_time:
+            food_recursion(data, board, been, fx, fy, data["you"]["id"])
 
     food_moves = []
     # iranyok szelektalasa
@@ -216,11 +249,21 @@ def find_food_better(data: Dict, board: BoardData, possible_moves: List[str]) ->
     return possible_moves
 
 
+# wrapped
 def help_to_head(data: Dict, board: BoardData, x: int, y: int) -> list:
     can_go = True
     attack = False
 
     for [i, j] in [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]:
+        if data["game"]["ruleset"]["name"] == "wrapped":  # wrapped change------
+            if i < 0:
+                i = board.width - 1
+            if j < 0:
+                j = board.height - 1
+            if i >= board.width:
+                i = 0
+            if j >= board.height:
+                j = 0
         if 0 <= i < board.width and 0 <= j < board.height:
             if board.board[j][i].name == "head":
                 if board.board[j][i].id != data["you"]["id"]:
@@ -232,7 +275,7 @@ def help_to_head(data: Dict, board: BoardData, x: int, y: int) -> list:
     return [can_go, attack]
 
 
-# TODO wrapped, falon at fejeles
+# wrapped, falon at fejeles----------------------------------------------------------------------------------------
 # fejeles tervezes szomszedos mezokon
 # oda nem mehetsz ahova másik head el tud menni és nagyobb vagy egyenlő hosszú, CSAK HA MUSZÁLY
 # oda mész ahova másik head tud menni és rövidebb
@@ -243,6 +286,15 @@ def who_to_head(data: Dict, board: BoardData, possible_moves: List[str]) -> List
     if len(possible_moves) > 1:
 
         for [i, j, direction] in [[x + 1, y, "right"], [x - 1, y, "left"], [x, y + 1, "up"], [x, y - 1, "down"]]:
+            if data["game"]["ruleset"]["name"] == "wrapped":  # wrapped change------
+                if i < 0:
+                    i = board.width - 1
+                if j < 0:
+                    j = board.height - 1
+                if i >= board.width:
+                    i = 0
+                if j >= board.height:
+                    j = 0
             if 0 <= i < board.width and 0 <= j < board.height:
                 if board.board[j][i].name in ["clear", "food", "hazard"] or board.board[j][i].name == "tail" and board.board[j][i].dis_time == 1:
                     output = help_to_head(data, board, i, j)
@@ -275,29 +327,42 @@ def hazard_remover(possible_moves: List[str], hazard_moves: List[str]) -> List[s
 
     return possible_moves
 
-# TODO wrapped, fal mellett a tuloldalon is lehet testresz
+
+# wrapped, fal mellett a tuloldalon is lehet testresz--------------------------------------------------------------
 # megvizsgalja hogy van -e mellette vagy keresztben mellette testresz
-def has_body_neighbour(board: BoardData, x: int, y: int) -> bool:
+def has_body_neighbour(data: Dict, board: BoardData, x: int, y: int) -> bool:
     for [i, j] in [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1],
                    [x + 1, y + 1], [x + 1, y - 1], [x - 1, y + 1], [x - 1, y - 1]]:
         if 0 <= i < board.width and 0 <= j < board.height:
             if board.board[j][i].name in ["head", "body", "tail"]:
                 return True
 
+        elif data["game"]["ruleset"]["name"] == "wrapped":  # wrapped change------
+            if i < 0:
+                i = board.width - 1
+            if j < 0:
+                j = board.height - 1
+            if i >= board.width:
+                i = 0
+            if j >= board.height:
+                j = 0
+            if board.board[j][i].name in ["head", "body", "tail"]:
+                return True
+
     return False
 
 
-# TODO wrapped modban vizsgaljon tovabb, ha kimenne a palyarol, atjon a tuloldalt
+# wrapped modban vizsgaljon tovabb, ha kimenne a palyarol, atjon a tuloldalt---------------------------------------
 def death_recursion(data: Dict, board: BoardData, been: List[List], x: int, y: int):
     # wrappedben kulso koordinata atkerul a tuloldalra
-    if data["game"]["ruleset"]["name"] == "wrapped":
+    if data["game"]["ruleset"]["name"] == "wrapped":  # wrapped change------
         if x < 0:
-            x = board.width-1
-        elif y < 0:
-            y = board.height-1
-        elif x >= board.width:
+            x = board.width - 1
+        if y < 0:
+            y = board.height - 1
+        if x >= board.width:
             x = 0
-        elif y >= board.height:
+        if y >= board.height:
             y = 0
 
     # fal
@@ -315,7 +380,18 @@ def death_recursion(data: Dict, board: BoardData, been: List[List], x: int, y: i
 
     for [i, j] in [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]:
         if 0 <= i < board.width and 0 <= j < board.height:
-            if has_body_neighbour(board, i, j):
+            if has_body_neighbour(data, board, i, j):
+                death_recursion(data, board, been, i, j)
+        elif data["game"]["ruleset"]["name"] == "wrapped":  # wrapped change------
+            if i < 0:
+                i = board.width - 1
+            if j < 0:
+                j = board.height - 1
+            if i >= board.width:
+                i = 0
+            if j >= board.height:
+                j = 0
+            if has_body_neighbour(data, board, i, j):
                 death_recursion(data, board, been, i, j)
             """
             for key in board.board[y][x].arrive_time:
@@ -325,6 +401,7 @@ def death_recursion(data: Dict, board: BoardData, been: List[List], x: int, y: i
             """
 
 
+# wrapped fal tuloldalan tervezes----------------------------------------------------------------------------------
 # lehetséges útvonalak rekurzív bejárása, önmagadba fordulás ellen
 def avoid_death(data: Dict, board: BoardData, possible_moves: List[str]) -> List[str]:
     tx = data["you"]["body"][len(data["you"]["body"]) - 1]["x"]
@@ -343,6 +420,19 @@ def avoid_death(data: Dict, board: BoardData, possible_moves: List[str]) -> List
 
     for [i, j, direction] in [[hx + 1, hy, "right"], [hx - 1, hy, "left"], [hx, hy + 1, "up"], [hx, hy - 1, "down"]]:
         if 0 <= i < board.width and 0 <= j < board.height:
+            if been[j][i] == 1:
+                states.append(["safe", direction])
+            else:
+                states.append(["deadly", direction])
+        elif data["game"]["ruleset"]["name"] == "wrapped":  # wrapped change------
+            if i < 0:
+                i = board.width - 1
+            if j < 0:
+                j = board.height - 1
+            if i >= board.width:
+                i = 0
+            if j >= board.height:
+                j = 0
             if been[j][i] == 1:
                 states.append(["safe", direction])
             else:
@@ -423,5 +513,5 @@ def choose_move(data: Dict, board: BoardData) -> str:
         move = ""
 
     print(f"{data['game']['id']} MOVE {data['turn']}: {move} picked from all valid options in {possible_moves}")
-
+    print(f"wrapped: {data['game']['ruleset']['name'] == 'wrapped'}")
     return move

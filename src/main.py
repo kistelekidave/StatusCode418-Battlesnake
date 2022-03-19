@@ -39,7 +39,7 @@ def handle_start():
     """
     data = request.get_json()
     global board
-    board = BoardData(data["board"])
+    board = BoardData(data["board"], data["game"]["ruleset"]["name"])
     board.refresh(data["board"])
 
     print(f"{data['game']['id']} START")
