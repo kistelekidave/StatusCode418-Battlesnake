@@ -1,14 +1,12 @@
 import logging
 import os
-
 from flask import Flask
 from flask import request
-
-import logic
 from board_data import BoardData
+from logic import Logic
+
 
 app = Flask(__name__)
-
 
 @app.get("/")
 def handle_info():
@@ -56,7 +54,7 @@ def handle_move():
     global board
     board.refresh(data["board"])
 
-    move = logic.choose_move(data, board)
+    move = Logic.choose_move(data, board)
 
     return {"move": move}
 

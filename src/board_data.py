@@ -1,77 +1,72 @@
-class Item:
-    name: str           # mező tartalma
-    arrive_time: dict   # kulcs id kigyo ennyi kör alatt érhet erre a mezőre
+from typing import Tuple
+from item_type import ItemType
+from utility import Utility
 
-    def __init__(self, name):
-        self.name = name
-        self.arrive_time = {}
+
+class Item:
+    def __init__(self, type):
+        self.type: ItemType = type      # mező tartalma
+        self.arrive_time: dict = {}     # kulcs id kigyo ennyi kör alatt érhet erre a mezőre
 
 
 class Bodypart(Item):
-    id: str         # kigyo id
-    direction: str  # testrész iránya mögötte lévő testrész alapján
-    health: int     # kigyo élet
-    dis_time: int   # testrész eltűnési ideje
-    length: int     # kigyo hossza
-
-    def __init__(self, name):
-        super().__init__(name)
-        self.id = None
-        self.direction = None
-        self.health = 100
-        self.dis_time = 1
-        self.length = 1
+    def __init__(self, type):
+        super().__init__(type)
+        self.id: str = ""              # kigyo id
+        self.direction: str = ""       # testrész iránya mögötte lévő testrész alapján
+        self.health: int = 100         # kigyo élet
+        self.disappear_time: int = 1   # testrész eltűnési ideje
+        self.length: int = 1           # kigyo hossza
 
 
 class BoardData:
-    board = []
-    height: int
-    width: int
-    modename: str
-
-    def __init__(self, board, modename):
-        self.height = board["height"]
-        self.width = board["width"]
-        self.modename = modename
+    def __init__(self, game_state, modename):
+        self.board: list[list[Item]] = [
+            [Item(ItemType.CLEAR) for _ in range(self.width)]
+            for _ in range(self.height)
+        ]
+        self.height: int = game_state["height"]
+        self.width: int = game_state["width"]
+        self.modename: str = modename
 
         for i in range(self.height):
             self.board.append([])
             for j in range(self.width):
-                item = Item("clear")
+                item = Item(ItemType.CLEAR)
                 self.board[i].append(item)
 
-    def get_dir(self, y, x, lasty, lastx) -> str:
-        if lastx > x:
-            return "right"
-        elif lastx < x:
-            return "left"
-        elif lasty > y:
-            return "up"
-        return "down"
+    def refresh(self, game_state):
+        self.clear_board()
+        self.place_food(game_state["food"])
+        self.place_hazards(game_state["hazards"])
+        self.place_snakes(game_state["snakes"])
+        self.calculate_arrival_times(game_state["snakes"])
 
-    def refresh(self, board):
+    def clear_board(self):
         # üresítés
         for i in range(self.height):
             for j in range(self.width):
-                self.board[i][j] = Item("clear")
-                # self.board[i][j].name = "clear"
+                self.board[i][j] = Item(ItemType.CLEAR)
 
+    def place_food(self, food_list):
         # kaja
-        for food in board["food"]:
+        for food in food_list:
             y = food["y"]
             x = food["x"]
-            self.board[y][x].name = "food"
+            self.board[y][x].type = ItemType.FOOD
 
+    def place_hazards(self, hazards):
         # veszély
-        for hazard in board["hazards"]:
+        for hazard in hazards:
             y = hazard["y"]
             x = hazard["x"]
-            self.board[y][x].name = "hazard"
+            self.board[y][x].type = ItemType.HAZARD
 
+    def place_snakes(self, snakes):
         # kigyajok
-        for snake in board["snakes"]:
-            lasty: int = None
-            lastx: int = None
+        for snake in snakes:
+            last_y: int = None
+            last_x: int = None
             part_number = 0
 
             # kigyaj testrészek
@@ -80,25 +75,25 @@ class BoardData:
                 x = bodypart["x"]
 
                 # testrész objektum, ez kerül a boardba
-                bodypartitem = Bodypart("body")
+                bodypartitem = Bodypart(ItemType.BODY)
 
                 # fej
                 if bodypart == snake["head"]:
-                    bodypartitem.name = "head"
+                    bodypartitem.type = ItemType.HEAD
                     self.board[y][x].direction = "up"
 
                 # farok
                 elif bodypart == snake["body"][len(snake["body"]) - 1]:
-                    bodypartitem.name = "tail"
-                    self.board[lasty][lastx].direction = self.get_dir(y, x, lasty, lastx)
+                    bodypartitem.type = ItemType.TAIL
+                    self.board[last_y][last_x].direction = Utility.get_direction(y, x, last_y, last_x)
 
                 # amúgy test
                 else:
-                    bodypartitem.name = "body"
-                    self.board[lasty][lastx].direction = self.get_dir(y, x, lasty, lastx)
+                    bodypartitem.type = ItemType.BODY
+                    self.board[last_y][last_x].direction = Utility.get_direction(y, x, last_y, last_x)
 
-                # dis_time megállapítás
-                bodypartitem.dis_time = snake["length"] - part_number
+                # disappear_time megállapítás
+                bodypartitem.disappear_time = snake["length"] - part_number
 
                 # egyáb attribútumok
                 bodypartitem.id = snake["id"]
@@ -107,45 +102,24 @@ class BoardData:
 
                 # temp változók
                 part_number += 1
-                lasty = y
-                lastx = x
+                last_y = y
+                last_x = x
 
                 self.board[y][x] = bodypartitem
 
-        # arrive_time megállapítása
-        for snake in board["snakes"]:
+    def calculate_arrival_times(self, snakes):
+        # arrive_time megállapítása minden snakenek
+        for snake in snakes:
             self.arrive_time_calculator(snake["head"]["x"], snake["head"]["y"], snake["id"], 1)
 
-    def wrap_coord_replace(self, x: int, y: int):
-        if x < 0:
-            x = self.width - 1
-        if y < 0:
-            y = self.height - 1
-        if x >= self.width:
-            x = 0
-        if y >= self.height:
-            y = 0
-
-    # wrapped, kimesz palyarol, tuloldalt kijossz------------------------------------------------------------------
+    # DFS graph traversal
+    # TODO: BFS might be better
     def arrive_time_calculator(self, x, y, id, number):
-
         for [i, j] in [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]:
-            if self.modename == "wrapped":  # wrapped change------
-                if i < 0:
-                    i = self.width - 1
-                if j < 0:
-                    j = self.height - 1
-                if i >= self.width:
-                    i = 0
-                if j >= self.height:
-                    j = 0
+            if self.modename == "wrapped":  # wrapped change
+                i, j = Utility.wrapped_coords(i, j, self.width, self.height)
             if 0 <= i < self.width and 0 <= j < self.height:
-                if self.board[j][i].name in ["clear", "food", "hazard"]:
-
-                    if id not in self.board[j][i].arrive_time:
-                        self.board[j][i].arrive_time[id] = number
-                        self.arrive_time_calculator(i, j, id, number + 1)
-
-                    elif self.board[j][i].arrive_time[id] > number:
+                if self.board[j][i].type in ["clear", "food", "hazard"]:
+                    if id not in self.board[j][i].arrive_time or self.board[j][i].arrive_time[id] > number:
                         self.board[j][i].arrive_time[id] = number
                         self.arrive_time_calculator(i, j, id, number + 1)
