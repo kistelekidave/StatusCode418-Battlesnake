@@ -1,7 +1,8 @@
 import random
 from typing import List, Dict
-from board_data import BoardData
-from utility import Utility
+from src.board_data import BoardData
+from src.item_type import ItemType
+from src.utility import Utility
 
 
 class Logic:
@@ -9,14 +10,15 @@ class Logic:
     # iranyok kivalogatasa avoid_obstacles fuggveny szamara
     @staticmethod
     def _help_avoid_snake(board_data: BoardData, dead_moves: List[str], hazard_moves: List[str], x: int, y: int, direction: str):
-        if board_data.board[y][x].type in ["head", "body"]:
+        if board_data.board[y][x].type in [ItemType.HEAD, ItemType.BODY]:
             dead_moves.append(direction)
 
-        elif board_data.board[y][x].type == "tail":
+        elif board_data.board[y][x].type == ItemType.TAIL:
+            # Ate a food then the tail will stay
             if board_data.board[y][x].health == 100:
                 dead_moves.append(direction)
 
-        elif board_data.board[y][x].type == "hazard":
+        elif board_data.board[y][x].type == ItemType.HAZARD:
             hazard_moves.append(direction)
 
     # megvizsgalja hogy van -e mellette vagy keresztben mellette testresz
@@ -25,12 +27,12 @@ class Logic:
         for [i, j] in [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1],
                     [x + 1, y + 1], [x + 1, y - 1], [x - 1, y + 1], [x - 1, y - 1]]:
             if 0 <= i < board_data.width and 0 <= j < board_data.height:
-                if board_data.board[j][i].type in ["head", "body", "tail"]:
+                if board_data.board[j][i].type in [ItemType.HEAD, ItemType.BODY, ItemType.TAIL]:
                     return True
 
             elif data["game"]["ruleset"]["name"] == "wrapped":  # wrapped change
                 i, j = Utility.wrapped_coords(i, j, board_data.width, board_data.height)
-                if board_data.board[j][i].type in ["head", "body", "tail"]:
+                if board_data.board[j][i].type in [ItemType.HEAD, ItemType.BODY, ItemType.TAIL]:
                     return True
         return False
 
@@ -49,7 +51,7 @@ class Logic:
         if been[y][x] == 1:
             return
         # testrészből nem megyünk tovább
-        if board_data.board[y][x].type in ["head", "body", "tail"]:
+        if board_data.board[y][x].type in [ItemType.HEAD, ItemType.BODY, ItemType.TAIL]:
             return
 
         been[y][x] = 1
@@ -73,11 +75,11 @@ class Logic:
             if data["game"]["ruleset"]["name"] == "wrapped":  # wrapped change
                 i, j = Utility.wrapped_coords(i, j, board_data.width, board_data.height)
             if 0 <= i < board_data.width and 0 <= j < board_data.height:
-                if board_data.board[j][i].type == "head":
+                if board_data.board[j][i].type == ItemType.HEAD:
                     if board_data.board[j][i].id != data["you"]["id"]:
                         if board_data.board[j][i].length >= data["you"]["length"]:
                             can_go = False
-                        elif board_data.board[j][i].type != "hazard":
+                        elif board_data.board[j][i].type != ItemType.HAZARD:
                             attack = True
         return [can_go, attack]
 
@@ -121,7 +123,7 @@ class Logic:
             if data["game"]["ruleset"]["name"] == "wrapped":  # wrapped change
                 i, j = Utility.wrapped_coords(i, j, board_data.width, board_data.height)
             if 0 <= i < board_data.width and 0 <= j < board_data.height:
-                if board_data.board[j][i].type in ["clear", "hazard", "food"]:
+                if board_data.board[j][i].type in [ItemType.CLEAR, ItemType.FOOD, ItemType.HAZARD]:
                     if board_data.board[j][i].arrive_time[my_id] < board_data.board[y][x].arrive_time[my_id]:
                         if [j, i] not in been:
                             been.append([i, j])
@@ -212,7 +214,7 @@ class Logic:
                 if data["game"]["ruleset"]["name"] == "wrapped":  # wrapped change
                     i, j = Utility.wrapped_coords(i, j, board_data.width, board_data.height)
                 if 0 <= i < board_data.width and 0 <= j < board_data.height:
-                    if board_data.board[j][i].type in ["clear", "food", "hazard"] or board_data.board[j][i].type == "tail" and board_data.board[j][i].dis_time == 1:
+                    if board_data.board[j][i].type in [ItemType.CLEAR, ItemType.FOOD, ItemType.HAZARD] or board_data.board[j][i].type == ItemType.TAIL and board_data.board[j][i].dis_time == 1:
                         output = Logic._help_to_head(data, board_data, i, j)
                         if not output[0]:
                             if direction in possible_moves:

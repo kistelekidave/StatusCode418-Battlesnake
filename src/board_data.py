@@ -1,6 +1,7 @@
 from typing import Tuple
-from item_type import ItemType
-from utility import Utility
+from src.item_type import ItemType
+from src.utility import Utility
+from src.arrive_time_calculator import ArriveTimeCalculator
 
 
 class Item:
@@ -21,10 +22,7 @@ class Bodypart(Item):
 
 class BoardData:
     def __init__(self, game_state, modename):
-        self.board: list[list[Item]] = [
-            [Item(ItemType.CLEAR) for _ in range(self.width)]
-            for _ in range(self.height)
-        ]
+        self.board: list[list[Item]] = []
         self.height: int = game_state["height"]
         self.width: int = game_state["width"]
         self.modename: str = modename
@@ -40,7 +38,7 @@ class BoardData:
         self.place_food(game_state["food"])
         self.place_hazards(game_state["hazards"])
         self.place_snakes(game_state["snakes"])
-        self.calculate_arrival_times(game_state["snakes"])
+        ArriveTimeCalculator.calculate_for_all_snakes(self, game_state["snakes"])
 
     def clear_board(self):
         # üresítés
@@ -106,20 +104,3 @@ class BoardData:
                 last_x = x
 
                 self.board[y][x] = bodypartitem
-
-    def calculate_arrival_times(self, snakes):
-        # arrive_time megállapítása minden snakenek
-        for snake in snakes:
-            self.arrive_time_calculator(snake["head"]["x"], snake["head"]["y"], snake["id"], 1)
-
-    # DFS graph traversal
-    # TODO: BFS might be better
-    def arrive_time_calculator(self, x, y, id, number):
-        for [i, j] in [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]:
-            if self.modename == "wrapped":  # wrapped change
-                i, j = Utility.wrapped_coords(i, j, self.width, self.height)
-            if 0 <= i < self.width and 0 <= j < self.height:
-                if self.board[j][i].type in ["clear", "food", "hazard"]:
-                    if id not in self.board[j][i].arrive_time or self.board[j][i].arrive_time[id] > number:
-                        self.board[j][i].arrive_time[id] = number
-                        self.arrive_time_calculator(i, j, id, number + 1)

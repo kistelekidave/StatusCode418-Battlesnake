@@ -2,8 +2,8 @@ import logging
 import os
 from flask import Flask
 from flask import request
-from board_data import BoardData
-from logic import Logic
+from src.board_data import BoardData
+from src.logic import Logic
 
 
 app = Flask(__name__)
